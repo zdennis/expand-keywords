@@ -1,16 +1,19 @@
 require "json"
 require "fileutils"
+require_relative "config"
 
 module ExpandKeyword
   KeywordEntry = Struct.new(:token, :expansion, :description, :use_count, :last_used, keyword_init: true)
 
   class KeywordStore
-    DEFAULT_PATH = File.expand_path("~/.claude/expand-keywords.json")
+    def self.default_path
+      Config.default_keywords_path
+    end
     RESERVED_KEYS = %w[schemaVersion].freeze
 
     attr_reader :path
 
-    def initialize(path = DEFAULT_PATH)
+    def initialize(path = self.class.default_path)
       @path = path
       @entries = nil
     end
@@ -39,6 +42,14 @@ module ExpandKeyword
         last_used: existing&.last_used
       )
       save
+    end
+
+    def delete(token)
+      entries = all
+      return false unless entries.key?(token)
+      entries.delete(token)
+      save
+      true
     end
 
     def save
