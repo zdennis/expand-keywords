@@ -69,6 +69,24 @@ class CLITest < Minitest::Test
     end
   end
 
+  def test_expand_bare_token_without_dollar_sign_expands
+    with_keyword_file({ "$greet" => "Hello!" }) do |path|
+      out, _err = capture_io do
+        run_cli(["expand", "--file", path, "greet"])
+      end
+      assert_equal "Hello!\n", out
+    end
+  end
+
+  def test_expand_bare_token_with_colon_namespace_expands
+    with_keyword_file({ "$foo:bar" => "expanded!" }) do |path|
+      out, _err = capture_io do
+        run_cli(["expand", "--file", path, "foo:bar"])
+      end
+      assert_equal "expanded!\n", out
+    end
+  end
+
   def test_expand_hook_reads_stdin_and_outputs_hook_json
     with_keyword_file({ "$ctx" => "some context" }) do |path|
       payload = JSON.generate({ "prompt" => "use $ctx please" })

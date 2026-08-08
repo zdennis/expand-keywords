@@ -159,6 +159,7 @@ module ExpandKeyword
       else
         text = argv[0]
         raise "Usage: expand-keyword expand --file PATH \"text with \$keywords\"" if text.nil?
+        text = "$#{text}" if text.match?(/\A[A-Za-z_][A-Za-z0-9_:\-]*\z/)
         puts expander.expand(text)
       end
     end
