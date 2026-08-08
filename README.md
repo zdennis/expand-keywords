@@ -10,11 +10,12 @@ Tokens can reference other tokens — expansions are resolved recursively.
 
 ## Installation
 
-Clone the repo and either run directly or symlink to your PATH:
+Clone the repo, run the setup script, then symlink to your PATH:
 
 ```bash
 git clone https://github.com/zdennis/expand-keywords.git
 cd expand-keywords
+bin/setup
 
 # Option 1: symlink to PATH
 ln -s "$(pwd)/bin/expand-keyword" /usr/local/bin/expand-keyword
@@ -22,6 +23,8 @@ ln -s "$(pwd)/bin/expand-keyword" /usr/local/bin/expand-keyword
 # Option 2: run directly
 ./bin/expand-keyword --help
 ```
+
+`bin/setup` installs the correct Ruby version (via rbenv if present) and runs `bundle install`. It is safe to run repeatedly.
 
 Ruby >= 3.0 required. No runtime gem dependencies.
 
@@ -162,11 +165,8 @@ expand-keyword expand "The token \$ctx is defined as..."
 ## Running tests
 
 ```bash
-bundle install
-bundle exec ruby -Ilib:test test/keyword_store_test.rb
-bundle exec ruby -Ilib:test test/expander_test.rb
-bundle exec ruby -Ilib:test test/formatter_test.rb
-bundle exec ruby -Ilib:test test/cli_test.rb
+bin/setup
+bundle exec rake test
 ```
 
 ## Contributing
