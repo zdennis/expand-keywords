@@ -13,7 +13,7 @@ Tokens can reference other tokens — expansions are resolved recursively.
 Clone the repo and either run directly or symlink to your PATH:
 
 ```bash
-git clone https://github.com/youruser/expand-keywords.git
+git clone https://github.com/zdennis/expand-keywords.git
 cd expand-keywords
 
 # Option 1: symlink to PATH
@@ -161,3 +161,11 @@ bundle exec ruby -Ilib:test test/expander_test.rb
 bundle exec ruby -Ilib:test test/formatter_test.rb
 bundle exec ruby -Ilib:test test/cli_test.rb
 ```
+
+## Contributing
+
+See [CONTRIBUTING.md](CONTRIBUTING.md).
+
+## License
+
+MIT — see [LICENSE](LICENSE).

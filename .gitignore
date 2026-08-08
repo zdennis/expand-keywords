@@ -3,3 +3,14 @@ vendor/
 Gemfile.lock
 .DS_Store
 tmp/
+coverage/
+*.gem
+*.log
+.vscode/
+.idea/
+*.swp
+*~
+.ruby-version
+.tool-versions
+.env
+*.env
