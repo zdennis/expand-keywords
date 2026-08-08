@@ -1,0 +1,33 @@
+#!/usr/bin/env bash
+set -e -o pipefail
+
+cd "$(dirname "$0")/.."
+
+echo "==> Setting up expand-keywords..."
+echo
+
+RUBY_VERSION=$(cat .ruby-version)
+
+if command -v rbenv &>/dev/null; then
+  echo "==> Installing Ruby $RUBY_VERSION via rbenv..."
+  rbenv install --skip-existing "$RUBY_VERSION"
+else
+  echo "    rbenv not found. Ensure Ruby $RUBY_VERSION is installed before continuing."
+fi
+
+echo "==> Installing gem dependencies..."
+bundle install
+
+ACTIVE_RUBY=$(ruby --version | cut -d' ' -f2)
+if [[ "$ACTIVE_RUBY" != "$RUBY_VERSION"* ]]; then
+  echo "⚠  Warning: Ruby $ACTIVE_RUBY is active, .ruby-version specifies $RUBY_VERSION"
+  echo "   Activate the correct version and re-run this script."
+fi
+
+echo
+echo "==> Setup complete!"
+echo
+echo "Next steps:"
+echo "  bin/expand-keyword init         # initialize keywords file"
+echo "  bin/expand-keyword --help       # explore commands"
+echo "  bundle exec rake test           # run tests"
