@@ -51,6 +51,13 @@ expand-keyword expand "Tell me about $ctx"
 expand-keyword expand --file /path/to/keywords.json "What is $mykey"
 ```
 
+You can also pass a bare token name without the `$` prefix — both forms are equivalent:
+
+```bash
+expand-keyword expand '$ctx'
+expand-keyword expand ctx
+```
+
 ### Claude Code hook mode
 
 Reads a JSON payload from stdin (Claude Code's `UserPromptSubmit` format) and writes hook JSON to stdout. Tokens that don't match any keyword are ignored.
@@ -61,7 +68,7 @@ echo '{"prompt": "help me with $ctx"}' | expand-keyword expand --hook
 
 ## JSON file format
 
-By default, keywords are stored at `~/.claude/expand-keywords.json`.
+By default, keywords are stored at `~/.config/expand-keyword/keywords.json`.
 
 **Object format (full):**
 
