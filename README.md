@@ -73,7 +73,21 @@ expand-keyword expand --namespace format bold-lead
 # same lookup, long form
 ```
 
-An explicit `$token` argument is always treated as exact — `-n` only applies to bare tokens. Tokens that already contain a colon are also left as-is, so `-n format format:bold-lead` expands `$format:bold-lead`, not `$format:format:bold-lead`. In `--hook` mode the namespace option is ignored (hook prompts contain fully-qualified tokens) and a warning is printed to stderr.
+An explicit `$token` argument is always treated as exact — `-n` only applies to bare tokens. Tokens that already contain a colon are also left as-is, so `-n format format:bold-lead` expands `$format:bold-lead`, not `$format:format:bold-lead`.
+
+In `--hook` mode, `-n` resolves colon-less `$TOKEN`s in the prompt as `$NAMESPACE:token` first. Claude Code runs hook commands with the project directory as the working directory, so the hook can scope resolution to the current repo (see [Claude Code hook integration](#claude-code-hook-integration) for the full wiring):
+
+```bash
+expand-keyword expand --hook -n "$(basename "$PWD")"
+```
+
+Working in a `growth-engine` checkout, the prompt `$reload-offers` resolves `$growth-engine:reload-offers` first, then `$reload-offers`.
+
+Note that outside `--hook` mode, `-n` only applies when the entire argument is a single bare token. To preview exactly what the hook will inject for a prompt, pipe it through `--hook`:
+
+```bash
+echo '{"prompt": "use $reload-offers"}' | expand-keyword expand --hook -n "$(basename "$PWD")"
+```
 
 ### Claude Code hook mode
 
@@ -143,6 +157,25 @@ If you store your keywords in a non-default location:
           {
             "type": "command",
             "command": "expand-keyword expand --hook --file /path/to/keywords.json"
+          }
+        ]
+      }
+    ]
+  }
+}
+```
+
+To scope token resolution to the current repo (namespace per working directory), hook commands run through the shell, so command substitution works directly:
+
+```json
+{
+  "hooks": {
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "expand-keyword expand --hook -n \"$(basename \"$PWD\")\""
           }
         ]
       }

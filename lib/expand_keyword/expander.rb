@@ -28,16 +28,33 @@ module ExpandKeyword
 
     # Collect the top-level tokens found in text and their fully-expanded values.
     # Returns a Hash of token => expanded_string for tokens that were found.
-    def found_tokens(text)
+    # When namespace is given, colon-less tokens resolve as $namespace:token
+    # first, falling back to the token as written.
+    def found_tokens(text, namespace: nil)
       working = text.gsub("\\$", ESCAPE_PLACEHOLDER)
       tokens = working.scan(TOKEN_REGEX).uniq
       result = {}
       tokens.each do |token|
-        entry = @store.find(token)
+        entry = lookup(token, namespace)
         next if entry.nil?
         result[token] = expand(entry.expansion, visiting: Set[token.downcase])
       end
       result
+    end
+
+    # Resolve a $-prefixed token against a namespace: colon-less tokens
+    # resolve as $namespace:token first, falling back to the token as given.
+    def resolve_token(token, namespace)
+      return token if namespace.nil? || token.include?(":")
+
+      namespaced = "$#{namespace}:#{token.delete_prefix("$")}"
+      @store.find(namespaced) ? namespaced : token
+    end
+
+    private
+
+    def lookup(token, namespace)
+      @store.find(resolve_token(token, namespace))
     end
   end
 end

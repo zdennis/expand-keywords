@@ -184,18 +184,52 @@ class CLITest < Minitest::Test
     end
   end
 
-  def test_expand_hook_ignores_namespace_option_with_warning
-    with_keyword_file({ "$ctx" => "some context" }) do |path|
-      payload = JSON.generate({ "prompt" => "use $ctx please" })
+  def test_expand_hook_with_namespace_resolves_namespaced_token_first
+    with_keyword_file({ "$format:bold-lead" => "namespaced", "$bold-lead" => "plain" }) do |path|
+      payload = JSON.generate({ "prompt" => "use $bold-lead please" })
       old_stdin = $stdin
       $stdin = StringIO.new(payload)
       begin
         out, err = capture_io do
           run_cli(["expand", "--file", path, "-n", "format", "--hook"])
         end
-        parsed = JSON.parse(out)
-        assert parsed.key?("hookSpecificOutput")
-        assert_includes err, "ignored in --hook mode"
+        assert_includes out, "namespaced"
+        assert_includes out, "$bold-lead"
+        refute_includes out, "plain"
+        assert_equal "", err
+      ensure
+        $stdin = old_stdin
+      end
+    end
+  end
+
+  def test_expand_hook_with_namespace_falls_back_to_plain_token
+    with_keyword_file({ "$bold-lead" => "plain" }) do |path|
+      payload = JSON.generate({ "prompt" => "use $bold-lead please" })
+      old_stdin = $stdin
+      $stdin = StringIO.new(payload)
+      begin
+        out, _err = capture_io do
+          run_cli(["expand", "--file", path, "-n", "format", "--hook"])
+        end
+        assert_includes out, "plain"
+      ensure
+        $stdin = old_stdin
+      end
+    end
+  end
+
+  def test_expand_hook_with_namespace_leaves_qualified_tokens_exact
+    with_keyword_file({ "$other:bold-lead" => "other", "$format:bold-lead" => "namespaced" }) do |path|
+      payload = JSON.generate({ "prompt" => "use $other:bold-lead please" })
+      old_stdin = $stdin
+      $stdin = StringIO.new(payload)
+      begin
+        out, _err = capture_io do
+          run_cli(["expand", "--file", path, "-n", "format", "--hook"])
+        end
+        assert_includes out, "other"
+        refute_includes out, "namespaced"
       ensure
         $stdin = old_stdin
       end
