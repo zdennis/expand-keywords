@@ -143,6 +143,7 @@ module ExpandKeyword
       options = { file: KeywordStore.default_path }
       OptionParser.new do |o|
         o.on("--file PATH", "Path to keywords JSON file") { |v| options[:file] = v }
+        o.on("-n NAMESPACE", "--namespace NAMESPACE", "Resolve a bare token as \$NAMESPACE:token first, falling back to the plain token") { |v| options[:namespace] = v }
         o.on("--hook", "Claude hook mode: read JSON from stdin, output hook JSON") { options[:hook] = true }
       end.parse!(argv)
 
@@ -150,6 +151,7 @@ module ExpandKeyword
       expander = Expander.new(store)
 
       if options[:hook]
+        warn "Warning: --namespace is ignored in --hook mode" if options[:namespace]
         payload_json = $stdin.read
         payload = JSON.parse(payload_json)
         prompt = payload["prompt"].to_s
@@ -158,10 +160,17 @@ module ExpandKeyword
         print response if response
       else
         text = argv[0]
-        raise "Usage: expand-keyword expand --file PATH \"text with \$keywords\"" if text.nil?
-        text = "$#{text}" if text.match?(/\A[A-Za-z_][A-Za-z0-9_:\-]*\z/)
+        raise "Usage: expand-keyword expand --file PATH [-n NAMESPACE] \"text with \$keywords\"" if text.nil?
+        text = resolve_token(text, options[:namespace], store) if text.match?(/\A[A-Za-z_][A-Za-z0-9_:\-]*\z/)
         puts expander.expand(text)
       end
+    end
+
+    def resolve_token(text, namespace, store)
+      return "$#{text}" if namespace.nil? || text.include?(":")
+
+      namespaced = "$#{namespace}:#{text}"
+      store.find(namespaced) ? namespaced : "$#{text}"
     end
 
     def run_edit(argv)
@@ -269,6 +278,7 @@ module ExpandKeyword
                   [--description DESC]
           remove  [--file PATH] $TOKEN                   Remove a keyword
           expand  [--file PATH] "text with $keywords"    Expand keywords in text
+                  [-n NAMESPACE]                         Resolve bare tokens as $NAMESPACE:token first
                   [--hook]                               Claude hook mode (reads JSON from stdin)
           edit    [--file PATH]                          Open keywords file in $EDITOR
           doctor  [--config PATH]                        Check setup and configuration

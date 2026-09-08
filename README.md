@@ -61,6 +61,20 @@ expand-keyword expand '$ctx'
 expand-keyword expand ctx
 ```
 
+### Namespace resolution
+
+Tokens with a colon (e.g. `$format:bold-lead`) belong to a namespace. With `-n/--namespace`, a bare token is resolved against that namespace first, falling back to the unnamespaced token:
+
+```bash
+expand-keyword expand -n format bold-lead
+# looks up $format:bold-lead, then $bold-lead
+
+expand-keyword expand --namespace format bold-lead
+# same lookup, long form
+```
+
+An explicit `$token` argument is always treated as exact — `-n` only applies to bare tokens. Tokens that already contain a colon are also left as-is, so `-n format format:bold-lead` expands `$format:bold-lead`, not `$format:format:bold-lead`. In `--hook` mode the namespace option is ignored (hook prompts contain fully-qualified tokens) and a warning is printed to stderr.
+
 ### Claude Code hook mode
 
 Reads a JSON payload from stdin (Claude Code's `UserPromptSubmit` format) and writes hook JSON to stdout. Tokens that don't match any keyword are ignored.

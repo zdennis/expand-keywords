@@ -87,6 +87,69 @@ class CLITest < Minitest::Test
     end
   end
 
+  def test_expand_with_namespace_option_resolves_namespaced_token_first
+    with_keyword_file({ "$format:bold-lead" => "namespaced", "$bold-lead" => "plain" }) do |path|
+      out, _err = capture_io do
+        run_cli(["expand", "--file", path, "-n", "format", "bold-lead"])
+      end
+      assert_equal "namespaced\n", out
+    end
+  end
+
+  def test_expand_with_namespace_long_option_resolves_namespaced_token
+    with_keyword_file({ "$format:bold-lead" => "namespaced" }) do |path|
+      out, _err = capture_io do
+        run_cli(["expand", "--file", path, "--namespace", "format", "bold-lead"])
+      end
+      assert_equal "namespaced\n", out
+    end
+  end
+
+  def test_expand_with_namespace_option_falls_back_to_unnamespaced_token
+    with_keyword_file({ "$bold-lead" => "plain" }) do |path|
+      out, _err = capture_io do
+        run_cli(["expand", "--file", path, "-n", "format", "bold-lead"])
+      end
+      assert_equal "plain\n", out
+    end
+  end
+
+  def test_expand_with_namespace_option_treats_dollar_prefixed_token_as_exact
+    with_keyword_file({ "$format:bold-lead" => "namespaced", "$bold-lead" => "plain" }) do |path|
+      out, _err = capture_io do
+        run_cli(["expand", "--file", path, "-n", "format", "$bold-lead"])
+      end
+      assert_equal "plain\n", out
+    end
+  end
+
+  def test_expand_with_namespace_option_skips_prefixing_already_qualified_token
+    with_keyword_file({ "$format:format:bold-lead" => "double", "$format:bold-lead" => "namespaced" }) do |path|
+      out, _err = capture_io do
+        run_cli(["expand", "--file", path, "-n", "format", "format:bold-lead"])
+      end
+      assert_equal "namespaced\n", out
+    end
+  end
+
+  def test_expand_with_namespace_option_leaves_token_unexpanded_when_neither_found
+    empty_keyword_file do |path|
+      out, _err = capture_io do
+        run_cli(["expand", "--file", path, "-n", "format", "bold-lead"])
+      end
+      assert_equal "$bold-lead\n", out
+    end
+  end
+
+  def test_expand_with_namespace_option_ignores_text_that_is_not_a_single_token
+    with_keyword_file({ "$format:bold-lead" => "namespaced" }) do |path|
+      out, _err = capture_io do
+        run_cli(["expand", "--file", path, "-n", "format", "use bold-lead here"])
+      end
+      assert_equal "use bold-lead here\n", out
+    end
+  end
+
   def test_expand_hook_reads_stdin_and_outputs_hook_json
     with_keyword_file({ "$ctx" => "some context" }) do |path|
       payload = JSON.generate({ "prompt" => "use $ctx please" })
@@ -115,6 +178,24 @@ class CLITest < Minitest::Test
           run_cli(["expand", "--file", path, "--hook"])
         end
         assert_equal "", out
+      ensure
+        $stdin = old_stdin
+      end
+    end
+  end
+
+  def test_expand_hook_ignores_namespace_option_with_warning
+    with_keyword_file({ "$ctx" => "some context" }) do |path|
+      payload = JSON.generate({ "prompt" => "use $ctx please" })
+      old_stdin = $stdin
+      $stdin = StringIO.new(payload)
+      begin
+        out, err = capture_io do
+          run_cli(["expand", "--file", path, "-n", "format", "--hook"])
+        end
+        parsed = JSON.parse(out)
+        assert parsed.key?("hookSpecificOutput")
+        assert_includes err, "ignored in --hook mode"
       ensure
         $stdin = old_stdin
       end
