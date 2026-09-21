@@ -78,7 +78,8 @@ module ExpandKeyword
     def save
       FileUtils.mkdir_p(File.dirname(@path))
       data = { "schemaVersion" => 1 }
-      all.each do |token, entry|
+      # case-insensitive sort by token, with the exact spelling as tiebreaker
+      all.sort_by { |token, _entry| [token.downcase, token] }.each do |token, entry|
         data[token] = {
           "expansion" => entry.expansion,
           "description" => entry.description,

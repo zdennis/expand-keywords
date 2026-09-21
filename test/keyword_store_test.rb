@@ -139,6 +139,19 @@ class KeywordStoreTest < Minitest::Test
     end
   end
 
+  def test_save_writes_keywords_sorted_by_token_name
+    empty_keyword_file do |path|
+      store = ExpandKeyword::KeywordStore.new(path)
+      store.add("$zeta", "z")
+      store.add("$Alpha", "a")
+      store.add("$beta", "b")
+      store.add("$Foo", "upper")
+      store.add("$foo", "lower")
+      raw = JSON.parse(File.read(path))
+      assert_equal ["schemaVersion", "$Alpha", "$beta", "$Foo", "$foo", "$zeta"], raw.keys
+    end
+  end
+
   def test_save_serializes_to_object_format
     empty_keyword_file do |path|
       store = ExpandKeyword::KeywordStore.new(path)
