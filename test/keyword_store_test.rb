@@ -103,6 +103,42 @@ class KeywordStoreTest < Minitest::Test
     end
   end
 
+  def test_record_use_increments_count_and_stamps_last_used
+    empty_keyword_file do |path|
+      store = ExpandKeyword::KeywordStore.new(path)
+      store.add("$greet", "Hello!")
+      before = Time.now.utc
+
+      assert store.record_use("$greet")
+
+      raw = JSON.parse(File.read(path))["$greet"]
+      assert_equal 1, raw["useCount"]
+      # iso8601 truncates subseconds, so compare against a floored timestamp
+      last_used = Time.parse(raw["lastUsed"])
+      assert last_used >= before.floor
+    end
+  end
+
+  def test_record_use_preserves_count_across_loads
+    with_keyword_file({ "$cmd" => { "expansion" => "run", "useCount" => 5, "lastUsed" => "2024-01-01" } }) do |path|
+      store = ExpandKeyword::KeywordStore.new(path)
+      store.record_use("$cmd")
+      reloaded = ExpandKeyword::KeywordStore.new(path)
+      assert_equal 6, reloaded.find("$cmd").use_count
+      refute_equal "2024-01-01", reloaded.find("$cmd").last_used
+    end
+  end
+
+  def test_record_use_returns_false_for_unknown_token
+    with_keyword_file({ "$known" => "value" }) do |path|
+      store = ExpandKeyword::KeywordStore.new(path)
+      refute store.record_use("$unknown")
+      raw = JSON.parse(File.read(path))
+      assert_equal "value", raw["$known"]
+      assert_nil raw["$known"]["useCount"]
+    end
+  end
+
   def test_save_serializes_to_object_format
     empty_keyword_file do |path|
       store = ExpandKeyword::KeywordStore.new(path)

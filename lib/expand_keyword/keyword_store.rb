@@ -1,4 +1,5 @@
 require "json"
+require "time"
 require "fileutils"
 require_relative "config"
 
@@ -42,6 +43,28 @@ module ExpandKeyword
         last_used: existing&.last_used
       )
       save
+    end
+
+    # Increment use_count and stamp last_used for tokens that resolved,
+    # with a single save at the end. Returns true if any token was recorded.
+    def record_uses(tokens)
+      now = Time.now.utc.iso8601
+      recorded = false
+      tokens.each do |token|
+        entry = find(token)
+        next if entry.nil?
+
+        entry.use_count = (entry.use_count || 0) + 1
+        entry.last_used = now
+        recorded = true
+      end
+      save if recorded
+      recorded
+    end
+
+    # Convenience wrapper for recording a single token.
+    def record_use(token)
+      record_uses([token])
     end
 
     def delete(token)

@@ -236,6 +236,94 @@ class CLITest < Minitest::Test
     end
   end
 
+  def test_expand_increments_use_count_for_resolved_tokens
+    with_keyword_file({ "$greet" => "Hello!" }) do |path|
+      capture_io do
+        run_cli(["expand", "--file", path, "Say $greet"])
+      end
+      raw = JSON.parse(File.read(path))["$greet"]
+      assert_equal 1, raw["useCount"]
+      refute_nil raw["lastUsed"]
+    end
+  end
+
+  def test_expand_does_not_touch_unknown_tokens
+    with_keyword_file({ "$greet" => "Hello!" }) do |path|
+      capture_io do
+        run_cli(["expand", "--file", path, "Say $unknown"])
+      end
+      raw = JSON.parse(File.read(path))["$greet"]
+      assert_nil raw["useCount"]
+    end
+  end
+
+  def test_expand_with_namespace_records_namespaced_token
+    with_keyword_file({ "$format:bold-lead" => "namespaced" }) do |path|
+      capture_io do
+        run_cli(["expand", "--file", path, "-n", "format", "bold-lead"])
+      end
+      raw = JSON.parse(File.read(path))["$format:bold-lead"]
+      assert_equal 1, raw["useCount"]
+    end
+  end
+
+  def test_expand_hook_increments_use_count
+    with_keyword_file({ "$ctx" => "some context" }) do |path|
+      payload = JSON.generate({ "prompt" => "use $ctx please" })
+      old_stdin = $stdin
+      $stdin = StringIO.new(payload)
+      begin
+        capture_io do
+          run_cli(["expand", "--file", path, "--hook"])
+        end
+      ensure
+        $stdin = old_stdin
+      end
+      raw = JSON.parse(File.read(path))["$ctx"]
+      assert_equal 1, raw["useCount"]
+      refute_nil raw["lastUsed"]
+    end
+  end
+
+  def test_expand_hook_does_not_write_when_no_tokens_found
+    with_keyword_file({ "$ctx" => "some context" }) do |path|
+      before = File.read(path)
+      payload = JSON.generate({ "prompt" => "no keywords here" })
+      old_stdin = $stdin
+      $stdin = StringIO.new(payload)
+      begin
+        capture_io do
+          run_cli(["expand", "--file", path, "--hook"])
+        end
+      ensure
+        $stdin = old_stdin
+      end
+      assert_equal before, File.read(path)
+    end
+  end
+
+  def test_expand_second_use_increments_to_two
+    with_keyword_file({ "$greet" => "Hello!" }) do |path|
+      2.times do
+        capture_io do
+          run_cli(["expand", "--file", path, "Say $greet"])
+        end
+      end
+      raw = JSON.parse(File.read(path))["$greet"]
+      assert_equal 2, raw["useCount"]
+    end
+  end
+
+  def test_expand_still_works_when_keywords_file_is_read_only
+    with_keyword_file({ "$greet" => "Hello!" }) do |path|
+      FileUtils.chmod(0o444, path)
+      out, _err = capture_io do
+        run_cli(["expand", "--file", path, "Say $greet"])
+      end
+      assert_includes out, "Hello!"
+    end
+  end
+
   def test_unknown_subcommand_exits_1
     _out, _err = capture_io do
       ex = assert_raises(SystemExit) do

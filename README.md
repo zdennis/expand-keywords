@@ -97,6 +97,8 @@ Reads a JSON payload from stdin (Claude Code's `UserPromptSubmit` format) and wr
 echo '{"prompt": "help me with $ctx"}' | expand-keyword expand --hook
 ```
 
+When a token resolves, `expand` records usage stats in the keywords file: it increments the entry's `useCount` and stamps `lastUsed` (ISO 8601 UTC). This means the hook writes to the keywords file — not just reads it — so a file under version control will show diffs as tokens are used. Recording is best-effort: if the file isn't writable, expansion still succeeds and a warning goes to stderr.
+
 ## JSON file format
 
 By default, keywords are stored at `~/.config/expand-keyword/keywords.json`.

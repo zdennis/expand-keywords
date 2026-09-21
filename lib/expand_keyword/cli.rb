@@ -155,14 +155,27 @@ module ExpandKeyword
         payload = JSON.parse(payload_json)
         prompt = payload["prompt"].to_s
         found = expander.found_tokens(prompt, namespace: options[:namespace])
+        record_uses(store, expander, found.keys, options[:namespace])
         response = Formatter.hook_response(found)
         print response if response
       else
         text = argv[0]
         raise "Usage: expand-keyword expand --file PATH [-n NAMESPACE] \"text with \$keywords\"" if text.nil?
         text = expander.resolve_token("$#{text}", options[:namespace]) if text.match?(/\A[A-Za-z_][A-Za-z0-9_:\-]*\z/)
+        found = expander.found_tokens(text, namespace: options[:namespace])
+        record_uses(store, expander, found.keys, options[:namespace])
         puts expander.expand(text)
       end
+    end
+
+    # Increment useCount/update lastUsed for each token that resolved.
+    # Records the namespace-resolved token so stats match what was expanded.
+    # Best-effort: usage stats must never break expansion (e.g. read-only file).
+    def record_uses(store, expander, tokens, namespace)
+      resolved = tokens.map { |token| expander.resolve_token(token, namespace) }
+      store.record_uses(resolved)
+    rescue => e
+      warn "Warning: could not record keyword usage: #{e.message}"
     end
 
     def run_edit(argv)
